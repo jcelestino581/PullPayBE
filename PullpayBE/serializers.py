@@ -8,10 +8,25 @@ class UserSerializer(serializers.ModelSerializer):
         model = User
         fields = [
             "id",
-            "firstName",
-            "lastName",
+            "first_name",
+            "last_name",
             "churches",
         ]  # You can modify which fields you want to expose
+
+
+class UserRegistrationSerializer(serializers.ModelSerializer):
+    password = serializers.CharField(write_only=True)
+
+    class Meta:
+        model = User
+        fields = ["firstName", "lastName", "email", "password"]
+
+    def create(self, validated_data):
+        password = validated_data.pop("password")
+        user = User.objects.create(**validated_data)
+        user.set_password(password)  # Ensure the password is hashed
+        user.save()
+        return user
 
 
 # Serializer for the Transaction model
