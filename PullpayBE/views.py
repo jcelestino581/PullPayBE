@@ -13,7 +13,7 @@ from .serializers import (
     UserSerializer,
     ChurchSerializer,
     UserRegistrationSerializer,
-    ProfileSerializer,
+    UserProfileSerializer,
 )
 import json
 from django.http import JsonResponse
@@ -73,47 +73,17 @@ def get_profile(request):
     return Response(user_data)
 
 
-@api_view(["PUT"])
-def update_profile(request):
-    # Ensure the user is authenticated
-    if not request.user.is_authenticated:
-        return Response(
-            {"error": "Authentication required"}, status=status.HTTP_401_UNAUTHORIZED
-        )
-
-    user = request.user  # The authenticated user
-
-    # Update the user's fields
-    user.first_name = request.data.get("first_name", user.first_name)
-    user.last_name = request.data.get("last_name", user.last_name)
-    user.email = request.data.get("email", user.email)
-
-    # Save the updated user
-    try:
-        user.save()
-        user_data = {
-            "first_name": user.first_name,
-            "last_name": user.last_name,
-            "email": user.email,
-        }
-        return Response(user_data)
-    except Exception as e:
-        return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
-
-
-class UserProfileView(APIView):
-    permission_classes = [IsAuthenticated]
-
-    def get(self, request):
-        # Handle GET request
+@api_view(["GET", "PUT"])
+def user_profile(request):
+    if request.method == "GET":
         user = request.user
-        serializer = UserSerializer(user)
+        serializer = UserProfileSerializer(user)
         return Response(serializer.data)
 
-    def put(self, request):
-        # Handle PUT request (updating user profile)
+    if request.method == "PUT":
         user = request.user
-        serializer = UserSerializer(user, data=request.data)
+        serializer = UserProfileSerializer(user, data=request.data, partial=False)
+
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)

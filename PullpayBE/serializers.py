@@ -40,7 +40,20 @@ class ChurchSerializer(serializers.ModelSerializer):
         fields = "__all__"
 
 
-class ProfileSerializer(serializers.Serializer):
-    first_name = serializers.CharField(max_length=100)
-    last_name = serializers.CharField(max_length=100)
-    email = serializers.EmailField()
+class UserProfileSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User  # Use the built-in User model
+        fields = [
+            "first_name",
+            "last_name",
+            "email",
+        ]  # Include the fields you want to update
+
+    def update(self, instance, validated_data):
+        # Here we manually update the fields of the `User` model
+        instance.first_name = validated_data.get("first_name", instance.first_name)
+        instance.last_name = validated_data.get("last_name", instance.last_name)
+        instance.email = validated_data.get("email", instance.email)
+
+        instance.save()
+        return instance

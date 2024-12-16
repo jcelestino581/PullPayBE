@@ -101,3 +101,5 @@ class Transaction(models.Model):
         Church, on_delete=models.CASCADE, default=1
     )  # Set default to an existing church ID
     date = models.DateTimeField(default=timezone.now)
+
+# hello
