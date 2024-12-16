@@ -102,4 +102,4 @@ class Transaction(models.Model):
     )  # Set default to an existing church ID
     date = models.DateTimeField(default=timezone.now)
 
-# hello
+# hello there testing
