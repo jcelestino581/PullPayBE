@@ -24,14 +24,26 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
         return user
 
 
-# Serializer for the Transaction model
 class TransactionSerializer(serializers.ModelSerializer):
-    user = serializers.PrimaryKeyRelatedField(queryset=User.objects.all())
-    church = serializers.PrimaryKeyRelatedField(queryset=Church.objects.all())
+    # Adding user's first name and last name to the transaction serializer
+    user_first_name = serializers.CharField(source="user.first_name", read_only=True)
+    user_last_name = serializers.CharField(source="user.last_name", read_only=True)
+    church_name = serializers.CharField(
+        source="church.name"
+    )  # Add this line to include church name
 
     class Meta:
         model = Transaction
-        fields = ["amount", "user", "church", "date"]
+        fields = [
+            "id",
+            "amount",
+            "date",
+            "user",
+            "church",
+            "user_first_name",
+            "user_last_name",
+            "church_name",
+        ]
 
 
 class ChurchSerializer(serializers.ModelSerializer):

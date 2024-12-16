@@ -5,3 +5,4 @@ from .models import Transaction, User, Church
 admin.site.register(Transaction)
 admin.site.register(User)
 admin.site.register(Church)
+

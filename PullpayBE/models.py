@@ -2,6 +2,12 @@ from django.db import models
 import uuid
 from django.utils import timezone
 from django.contrib.auth.models import AbstractUser, BaseUserManager
+from django.shortcuts import get_object_or_404
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from django.utils.decorators import method_decorator
+from django.views import View
+import json
 
 # Create your models here.
 
@@ -95,11 +101,18 @@ class Church(models.Model):
 
 
 class Transaction(models.Model):
+    id = models.UUIDField(
+        primary_key=True, default=uuid.uuid4, editable=False
+    )  # Unique ID
     amount = models.DecimalField(max_digits=10, decimal_places=2)
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     church = models.ForeignKey(
-        Church, on_delete=models.CASCADE, default=1
+        "Church", on_delete=models.CASCADE
     )  # Set default to an existing church ID
     date = models.DateTimeField(default=timezone.now)
 
-# hello there testing
+    def __str__(self):
+        return f"Transaction {self.id} - {self.amount}"
+
+
+

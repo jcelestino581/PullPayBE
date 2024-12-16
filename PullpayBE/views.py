@@ -25,6 +25,9 @@ from django.shortcuts import render, redirect
 from rest_framework.authtoken.models import Token
 from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework.views import APIView
+from django.shortcuts import get_object_or_404
+from django.utils.decorators import method_decorator
+from django.views import View
 
 
 class LoginView(APIView):
@@ -87,4 +90,115 @@ def user_profile(request):
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class TransactionListView(APIView):
+    permission_classes = [IsAuthenticated]  # Ensure the user is authenticated
+
+    def get(self, request):
+        # Get the transactions for the logged-in user
+        transactions = Transaction.objects.filter(user=request.user)
+        serializer = TransactionSerializer(transactions, many=True)
+        return Response(serializer.data)
+
+
+class ChurchListView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        """
+        List all churches
+        """
+        churches = Church.objects.all()
+        serializer = ChurchSerializer(churches, many=True)
+        return Response(serializer.data)
+
+
+class ChurchDetailView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, pk):
+        """
+        Get details of a single church by ID
+        """
+        try:
+            church = Church.objects.get(pk=pk)
+        except Church.DoesNotExist:
+            return Response(
+                {"detail": "Church not found."}, status=status.HTTP_404_NOT_FOUND
+            )
+
+        serializer = ChurchSerializer(church)
+        return Response(serializer.data)
+
+    def put(self, request, pk):
+        """
+        Update a church
+        """
+        try:
+            church = Church.objects.get(pk=pk)
+        except Church.DoesNotExist:
+            return Response(
+                {"detail": "Church not found."}, status=status.HTTP_404_NOT_FOUND
+            )
+
+        serializer = ChurchSerializer(church, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def delete(self, request, pk):
+        """
+        Delete a church by ID
+        """
+        try:
+            church = Church.objects.get(pk=pk)
+            church.delete()
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        except Church.DoesNotExist:
+            return Response(
+                {"detail": "Church not found."}, status=status.HTTP_404_NOT_FOUND
+            )
+
+
+class ChurchCreateView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        """
+        Create a new church
+        """
+        serializer = ChurchSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class TransactionCreateView(APIView):
+    permission_classes = [IsAuthenticated]  # Ensure the user is authenticated
+
+    def post(self, request):
+        """
+        Create a new transaction for the authenticated user
+        """
+        # Add the user to the request data
+        data = request.data.copy()
+        data["user"] = (
+            request.user.id
+        )  # Automatically assign the authenticated user to the transaction
+
+        # Ensure the church_id is provided in the request data (required for ForeignKey)
+        if "church_id" not in data:
+            return Response(
+                {"error": "church_id is required"}, status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Validate and create the transaction
+        serializer = TransactionSerializer(data=data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

@@ -16,4 +16,17 @@ urlpatterns = [
     path("api/user/", views.get_profile, name="get_profile"),  # Handle GET requests
     # path("user/", views.update_profile, name="update_profile"),
     path("user/", views.user_profile, name="user"),  # Ensure this is correct
+    path(
+        "api/transactions/",
+        views.TransactionListView.as_view(),
+        name="transaction-list",
+    ),
+    path("churches/", views.ChurchListView.as_view(), name="church-list"),
+    path("churches/<int:pk>/", views.ChurchDetailView.as_view(), name="church-detail"),
+    path("churches/create/", views.ChurchCreateView.as_view(), name="church-create"),
+    path(
+        "transactions/create/",
+        views.TransactionCreateView.as_view(),
+        name="create-transaction",
+    ),
 ]
