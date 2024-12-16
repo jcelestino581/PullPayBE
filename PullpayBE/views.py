@@ -1,99 +1,120 @@
-from rest_framework import generics, viewsets, status
+from rest_framework import generics, viewsets, status, serializers
 from rest_framework.response import Response
-from rest_framework.decorators import api_view
-from django.contrib.auth import get_user_model
+from rest_framework.decorators import (
+    api_view,
+    authentication_classes,
+    permission_classes,
+)
+from django.contrib.auth import get_user_model, authenticate, login
+from django.views.decorators.csrf import csrf_exempt
 from .models import Transaction, User, Church
 from .serializers import (
     TransactionSerializer,
     UserSerializer,
     ChurchSerializer,
     UserRegistrationSerializer,
+    ProfileSerializer,
 )
+import json
+from django.http import JsonResponse
+from django.contrib.auth.decorators import login_required
+from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.authentication import TokenAuthentication
+from django.shortcuts import render, redirect
+from rest_framework.authtoken.models import Token
+from rest_framework_simplejwt.views import TokenObtainPairView
+from rest_framework.views import APIView
 
 
-class TransactionViewSet(viewsets.ModelViewSet):
-    queryset = Transaction.objects.all()
-    serializer_class = TransactionSerializer
+class LoginView(APIView):
+    def post(self, request):
+        username = request.data.get("username")
+        password = request.data.get("password")
+        user = authenticate(username=username, password=password)
 
-
-class UserViewSet(viewsets.ModelViewSet):
-    queryset = User.objects.all()
-    serializer_class = UserSerializer
-
-
-class ChurchViewSet(viewsets.ModelViewSet):
-    queryset = Church.objects.all()
-    serializer_class = UserSerializer
-
-
-@api_view(["POST"])
-def register_user(request):
-    # Retrieve the data from the request body
-    data = request.data
-
-    # Retrieve the fields
-    first_name = data.get("first_name")  # camelCase from the frontend
-    last_name = data.get("last_name")  # camelCase from the frontend
-    email = data.get("email")
-    password = data.get("password")
-    churches = data.get("churches", [])
-
-    # Ensure all fields are provided
-    if not all([first_name, last_name, email, password]):
-        return Response(
-            {"error": "All fields are required."}, status=status.HTTP_400_BAD_REQUEST
-        )
-
-    # Check if the email already exists
-    if get_user_model().objects.filter(email=email).exists():
-        return Response(
-            {"error": "Email already exists."}, status=status.HTTP_400_BAD_REQUEST
-        )
-
-    # Create the user with snake_case field names for Django
-    user = get_user_model().objects.create_user(
-        first_name=first_name,
-        last_name=last_name,
-        email=email,
-        password=password,
-    )
-
-    # Add the user to the churches
-    for church_name in churches:
-        try:
-            church = Church.objects.get(name=church_name)
-            user.churches.add(church)
-        except Church.DoesNotExist:
+        if user is not None:
+            refresh = RefreshToken.for_user(user)
             return Response(
-                {"error": f"Church with name {church_name} does not exist."},
-                status=status.HTTP_400_BAD_REQUEST,
+                {
+                    "refresh": str(refresh),
+                    "access": str(refresh.access_token),
+                }
             )
-
-    # Return a success message
-    return Response(
-        {"message": "User registered successfully!"}, status=status.HTTP_201_CREATED
-    )
+        return Response(
+            {"error": "Invalid credentials"}, status=status.HTTP_401_UNAUTHORIZED
+        )
 
 
-# Create a list view for all transactions
-class TransactionListView(generics.ListCreateAPIView):
-    queryset = Transaction.objects.all()
-    serializer_class = TransactionSerializer
+class UserDetailView(APIView):
+    permission_classes = [IsAuthenticated]  # Ensure only logged-in users can access
+
+    def get(self, request):
+        user = request.user
+        serializer = UserSerializer(user)
+        return Response(serializer.data)
 
 
-# Create a detail view for a single transaction
-class TransactionDetailView(generics.RetrieveUpdateDestroyAPIView):
-    queryset = Transaction.objects.all()
-    serializer_class = TransactionSerializer
+@api_view(["GET"])
+def get_profile(request):
+    # Ensure the user is authenticated
+    if not request.user.is_authenticated:
+        return Response(
+            {"error": "Authentication required"}, status=status.HTTP_401_UNAUTHORIZED
+        )
+
+    user = request.user  # The authenticated user
+    user_data = {
+        "first_name": user.first_name,
+        "last_name": user.last_name,
+        "email": user.email,
+    }
+
+    return Response(user_data)
 
 
-# Create a list view for all users
-class UserListView(generics.ListCreateAPIView):
-    queryset = User.objects.all()
-    serializer_class = UserSerializer
+@api_view(["PUT"])
+def update_profile(request):
+    # Ensure the user is authenticated
+    if not request.user.is_authenticated:
+        return Response(
+            {"error": "Authentication required"}, status=status.HTTP_401_UNAUTHORIZED
+        )
+
+    user = request.user  # The authenticated user
+
+    # Update the user's fields
+    user.first_name = request.data.get("first_name", user.first_name)
+    user.last_name = request.data.get("last_name", user.last_name)
+    user.email = request.data.get("email", user.email)
+
+    # Save the updated user
+    try:
+        user.save()
+        user_data = {
+            "first_name": user.first_name,
+            "last_name": user.last_name,
+            "email": user.email,
+        }
+        return Response(user_data)
+    except Exception as e:
+        return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 
-# Create a detail view for a single user
-class UserDetailView(generics.RetrieveUpdateDestroyAPIView):
-    queryset = User.objects.all()
-    serializer_class = UserSerializer
+class UserProfileView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        # Handle GET request
+        user = request.user
+        serializer = UserSerializer(user)
+        return Response(serializer.data)
+
+    def put(self, request):
+        # Handle PUT request (updating user profile)
+        user = request.user
+        serializer = UserSerializer(user, data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

@@ -28,10 +28,20 @@ DEBUG = True
 ALLOWED_HOSTS = []
 
 CORS_ALLOW_ALL_ORIGINS = True
+CORS_ALLOW_CREDENTIALS = True
+
 
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",  # React development server
 ]
+
+CORS_ALLOW_HEADERS = [
+    "content-type",  # Allow content-type header
+    "accept",
+    "authorization",  # Allow authorization if needed
+    "x-requested-with",  # Allow AJAX requests
+]
+
 
 AUTH_USER_MODEL = "PullpayBE.User"
 # Application definition
@@ -46,7 +56,17 @@ INSTALLED_APPS = [
     "PullpayBE",
     "rest_framework",
     "corsheaders",
+    "rest_framework_simplejwt",
+    "rest_framework.authtoken",
 ]
+
+REST_FRAMEWORK = {
+    "DEFAULT_AUTHENTICATION_CLASSES": [
+        "rest_framework_simplejwt.authentication.JWTAuthentication",
+    ],
+}
+
+CSRF_TRUSTED_ORIGINS = ["http://localhost:3000"]
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",

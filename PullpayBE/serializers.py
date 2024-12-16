@@ -2,16 +2,11 @@ from rest_framework import serializers
 from .models import User, Transaction, Church  # Import the models
 
 
-# Serializer for the User model
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = [
-            "id",
-            "first_name",
-            "last_name",
-            "churches",
-        ]  # You can modify which fields you want to expose
+        fields = ["id", "first_name", "last_name", "email", "churches"]
+        depth = 1  # Expand related fields like churches if necessary
 
 
 class UserRegistrationSerializer(serializers.ModelSerializer):
@@ -42,9 +37,10 @@ class TransactionSerializer(serializers.ModelSerializer):
 class ChurchSerializer(serializers.ModelSerializer):
     class Meta:
         model = Church
-        fields = [
-            "id",
-            "name",
-            "churchSize",
-            "denomination",
-        ]  # Include the fields you want to expose in the API
+        fields = "__all__"
+
+
+class ProfileSerializer(serializers.Serializer):
+    first_name = serializers.CharField(max_length=100)
+    last_name = serializers.CharField(max_length=100)
+    email = serializers.EmailField()
